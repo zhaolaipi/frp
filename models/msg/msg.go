@@ -14,104 +14,108 @@
 
 package msg
 
-import (
-	"net"
-	"reflect"
-)
+import "net"
 
 const (
-	TypeLogin             = 'o'
-	TypeLoginResp         = '1'
-	TypeNewProxy          = 'p'
-	TypeNewProxyResp      = '2'
-	TypeCloseProxy        = 'c'
-	TypeNewWorkConn       = 'w'
-	TypeReqWorkConn       = 'r'
-	TypeStartWorkConn     = 's'
-	TypeNewVistorConn     = 'v'
-	TypeNewVistorConnResp = '3'
-	TypePing              = 'h'
-	TypePong              = '4'
-	TypeUdpPacket         = 'u'
+	TypeLogin                 = 'o'
+	TypeLoginResp             = '1'
+	TypeNewProxy              = 'p'
+	TypeNewProxyResp          = '2'
+	TypeCloseProxy            = 'c'
+	TypeNewWorkConn           = 'w'
+	TypeReqWorkConn           = 'r'
+	TypeStartWorkConn         = 's'
+	TypeNewVisitorConn        = 'v'
+	TypeNewVisitorConnResp    = '3'
+	TypePing                  = 'h'
+	TypePong                  = '4'
+	TypeUdpPacket             = 'u'
+	TypeNatHoleVisitor        = 'i'
+	TypeNatHoleClient         = 'n'
+	TypeNatHoleResp           = 'm'
+	TypeNatHoleClientDetectOK = 'd'
+	TypeNatHoleSid            = '5'
 )
 
 var (
-	TypeMap       map[byte]reflect.Type
-	TypeStringMap map[reflect.Type]byte
-)
-
-func init() {
-	TypeMap = make(map[byte]reflect.Type)
-	TypeStringMap = make(map[reflect.Type]byte)
-
-	TypeMap[TypeLogin] = reflect.TypeOf(Login{})
-	TypeMap[TypeLoginResp] = reflect.TypeOf(LoginResp{})
-	TypeMap[TypeNewProxy] = reflect.TypeOf(NewProxy{})
-	TypeMap[TypeNewProxyResp] = reflect.TypeOf(NewProxyResp{})
-	TypeMap[TypeCloseProxy] = reflect.TypeOf(CloseProxy{})
-	TypeMap[TypeNewWorkConn] = reflect.TypeOf(NewWorkConn{})
-	TypeMap[TypeReqWorkConn] = reflect.TypeOf(ReqWorkConn{})
-	TypeMap[TypeStartWorkConn] = reflect.TypeOf(StartWorkConn{})
-	TypeMap[TypeNewVistorConn] = reflect.TypeOf(NewVistorConn{})
-	TypeMap[TypeNewVistorConnResp] = reflect.TypeOf(NewVistorConnResp{})
-	TypeMap[TypePing] = reflect.TypeOf(Ping{})
-	TypeMap[TypePong] = reflect.TypeOf(Pong{})
-	TypeMap[TypeUdpPacket] = reflect.TypeOf(UdpPacket{})
-
-	for k, v := range TypeMap {
-		TypeStringMap[v] = k
+	msgTypeMap = map[byte]interface{}{
+		TypeLogin:                 Login{},
+		TypeLoginResp:             LoginResp{},
+		TypeNewProxy:              NewProxy{},
+		TypeNewProxyResp:          NewProxyResp{},
+		TypeCloseProxy:            CloseProxy{},
+		TypeNewWorkConn:           NewWorkConn{},
+		TypeReqWorkConn:           ReqWorkConn{},
+		TypeStartWorkConn:         StartWorkConn{},
+		TypeNewVisitorConn:        NewVisitorConn{},
+		TypeNewVisitorConnResp:    NewVisitorConnResp{},
+		TypePing:                  Ping{},
+		TypePong:                  Pong{},
+		TypeUdpPacket:             UdpPacket{},
+		TypeNatHoleVisitor:        NatHoleVisitor{},
+		TypeNatHoleClient:         NatHoleClient{},
+		TypeNatHoleResp:           NatHoleResp{},
+		TypeNatHoleClientDetectOK: NatHoleClientDetectOK{},
+		TypeNatHoleSid:            NatHoleSid{},
 	}
-}
-
-// Message wraps socket packages for communicating between frpc and frps.
-type Message interface{}
+)
 
 // When frpc start, client send this message to login to server.
 type Login struct {
-	Version      string `json:"version"`
-	Hostname     string `json:"hostname"`
-	Os           string `json:"os"`
-	Arch         string `json:"arch"`
-	User         string `json:"user"`
-	PrivilegeKey string `json:"privilege_key"`
-	Timestamp    int64  `json:"timestamp"`
-	RunId        string `json:"run_id"`
+	Version      string            `json:"version"`
+	Hostname     string            `json:"hostname"`
+	Os           string            `json:"os"`
+	Arch         string            `json:"arch"`
+	User         string            `json:"user"`
+	PrivilegeKey string            `json:"privilege_key"`
+	Timestamp    int64             `json:"timestamp"`
+	RunId        string            `json:"run_id"`
+	Metas        map[string]string `json:"metas"`
 
 	// Some global configures.
 	PoolCount int `json:"pool_count"`
 }
 
 type LoginResp struct {
-	Version string `json:"version"`
-	RunId   string `json:"run_id"`
-	Error   string `json:"error"`
+	Version       string `json:"version"`
+	RunId         string `json:"run_id"`
+	ServerUdpPort int    `json:"server_udp_port"`
+	Error         string `json:"error"`
 }
 
 // When frpc login success, send this message to frps for running a new proxy.
 type NewProxy struct {
-	ProxyName      string `json:"proxy_name"`
-	ProxyType      string `json:"proxy_type"`
-	UseEncryption  bool   `json:"use_encryption"`
-	UseCompression bool   `json:"use_compression"`
+	ProxyName      string            `json:"proxy_name"`
+	ProxyType      string            `json:"proxy_type"`
+	UseEncryption  bool              `json:"use_encryption"`
+	UseCompression bool              `json:"use_compression"`
+	Group          string            `json:"group"`
+	GroupKey       string            `json:"group_key"`
+	Metas          map[string]string `json:"metas"`
 
 	// tcp and udp only
-	RemotePort int64 `json:"remote_port"`
+	RemotePort int `json:"remote_port"`
 
 	// http and https only
-	CustomDomains     []string `json:"custom_domains"`
-	SubDomain         string   `json:"subdomain"`
-	Locations         []string `json:"locations"`
-	HostHeaderRewrite string   `json:"host_header_rewrite"`
-	HttpUser          string   `json:"http_user"`
-	HttpPwd           string   `json:"http_pwd"`
+	CustomDomains     []string          `json:"custom_domains"`
+	SubDomain         string            `json:"subdomain"`
+	Locations         []string          `json:"locations"`
+	HttpUser          string            `json:"http_user"`
+	HttpPwd           string            `json:"http_pwd"`
+	HostHeaderRewrite string            `json:"host_header_rewrite"`
+	Headers           map[string]string `json:"headers"`
 
 	// stcp
 	Sk string `json:"sk"`
+
+	// tcpmux
+	Multiplexer string `json:"multiplexer"`
 }
 
 type NewProxyResp struct {
-	ProxyName string `json:"proxy_name"`
-	Error     string `json:"error"`
+	ProxyName  string `json:"proxy_name"`
+	RemoteAddr string `json:"remote_addr"`
+	Error      string `json:"error"`
 }
 
 type CloseProxy struct {
@@ -119,7 +123,9 @@ type CloseProxy struct {
 }
 
 type NewWorkConn struct {
-	RunId string `json:"run_id"`
+	RunId        string `json:"run_id"`
+	PrivilegeKey string `json:"privilege_key"`
+	Timestamp    int64  `json:"timestamp"`
 }
 
 type ReqWorkConn struct {
@@ -127,9 +133,14 @@ type ReqWorkConn struct {
 
 type StartWorkConn struct {
 	ProxyName string `json:"proxy_name"`
+	SrcAddr   string `json:"src_addr"`
+	DstAddr   string `json:"dst_addr"`
+	SrcPort   uint16 `json:"src_port"`
+	DstPort   uint16 `json:"dst_port"`
+	Error     string `json:"error"`
 }
 
-type NewVistorConn struct {
+type NewVisitorConn struct {
 	ProxyName      string `json:"proxy_name"`
 	SignKey        string `json:"sign_key"`
 	Timestamp      int64  `json:"timestamp"`
@@ -137,19 +148,47 @@ type NewVistorConn struct {
 	UseCompression bool   `json:"use_compression"`
 }
 
-type NewVistorConnResp struct {
+type NewVisitorConnResp struct {
 	ProxyName string `json:"proxy_name"`
 	Error     string `json:"error"`
 }
 
 type Ping struct {
+	PrivilegeKey string `json:"privilege_key"`
+	Timestamp    int64  `json:"timestamp"`
 }
 
 type Pong struct {
+	Error string `json:"error"`
 }
 
 type UdpPacket struct {
 	Content    string       `json:"c"`
 	LocalAddr  *net.UDPAddr `json:"l"`
 	RemoteAddr *net.UDPAddr `json:"r"`
+}
+
+type NatHoleVisitor struct {
+	ProxyName string `json:"proxy_name"`
+	SignKey   string `json:"sign_key"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+type NatHoleClient struct {
+	ProxyName string `json:"proxy_name"`
+	Sid       string `json:"sid"`
+}
+
+type NatHoleResp struct {
+	Sid         string `json:"sid"`
+	VisitorAddr string `json:"visitor_addr"`
+	ClientAddr  string `json:"client_addr"`
+	Error       string `json:"error"`
+}
+
+type NatHoleClientDetectOK struct {
+}
+
+type NatHoleSid struct {
+	Sid string `json:"sid"`
 }
